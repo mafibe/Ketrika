@@ -1,0 +1,70 @@
+name: Logout Account
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Email du compte"
+        required: true
+        type: string
+      platform:
+        description: "Plateforme (ex: freetron, tronpick...)"
+        required: true
+        type: string
+      userId:
+        description: "USER_ID"
+        required: true
+        type: string
+      proxyIndex:
+        description: "Index du proxy (optionnel)"
+        required: false
+        type: string
+        default: "0"
+
+jobs:
+  logout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    container:
+      image: ghcr.io/aliya123-pro/camoufox-system:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout du dépôt privé
+        uses: actions/checkout@v4
+        with:
+          repository: Aliya123-pro/Aliyas
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private-code
+          ref: main
+
+      - name: Exécuter le logout
+        working-directory: /app
+        env:
+          HOME: /home/camoxuser
+          DISPLAY: ":99"
+          LOGOUT_EMAIL: ${{ github.event.inputs.email }}
+          LOGOUT_PLATFORM: ${{ github.event.inputs.platform }}
+          LOGOUT_PROXY_INDEX: ${{ github.event.inputs.proxyIndex || '0' }}
+          USER_ID: ${{ github.event.inputs.userId }}
+          GH_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          GH_USERNAME: Aliya123-pro
+          GH_REPO: Aliyas
+          GH_BRANCH: main
+          JP_PROXY_LIST: ${{ secrets.JP_PROXY_LIST }}
+          CRYPTO_SECRET: ${{ secrets.CRYPTO_SECRET }}
+        run: |
+          cp -r $GITHUB_WORKSPACE/private-code/* /app/
+          mkdir -p /app/videos /app/screenshots
+          xvfb-run --auto-servernum python borita.py
+
+      - name: Upload des vidéos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logout-video-${{ github.run_id }}
+          path: /app/videos/
+          retention-days: 5
+          if-no-files-found: warn
